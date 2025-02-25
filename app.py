@@ -4,6 +4,7 @@ import re
 from fuzzywuzzy import process
 from pdfminer.high_level import extract_text
 import io
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -57,4 +58,5 @@ def ask_question():
     return jsonify({"answer": normalized_qa_data[best_match]})
     
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    port = int(os.getenv("PORT", 5000))  # ✅ Use Render's assigned PORT, default to 5000
+    app.run(host="0.0.0.0", port=port, debug=True)
