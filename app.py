@@ -42,12 +42,19 @@ def ask_question():
     user_question = data.get("question", "").strip().lower()
 
     normalized_qa_data = {q.lower(): a for q, a in qa_data.items()}
-    best_match, score = process.extractOne(user_question, normalized_qa_data.keys())
+    if not normalized_qa_data:
+        return jsonify({"answer": "No Q&A data available."})
 
-    if score >= 70:
-        return jsonify({"answer": normalized_qa_data[best_match]})
-    else:
-        return jsonify({"answer": "Sorry, I couldn't find an exact match. Try rephrasing your question."})
+    match = process.extractOne(user_question, normalized_qa_data.keys())
+    if match is None or match[1] < 100:  # Adjust threshold as needed
+        questions_list = list(qa_data.keys())
+        return jsonify({
+            "answer": "Irrelevant. Please try a question related to the topic.",
+            "questions": questions_list
+        })
 
+    best_match, score = match
+    return jsonify({"answer": normalized_qa_data[best_match]})
+    
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
