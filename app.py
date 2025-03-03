@@ -87,4 +87,4 @@ def ask_question():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Ensure PORT is properly set
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
