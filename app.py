@@ -1,15 +1,17 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import re
-from fuzzywuzzy import process
-from pdfminer.high_level import extract_text
 import io
 import os
+from fuzzywuzzy import process
+from pdfminer.high_level import extract_text
+from sentence_transformers import SentenceTransformer, util
 
 app = Flask(__name__)
 CORS(app)
 
 qa_data = {}
+model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight semantic similarity model
 
 def extract_text_from_pdf(file_storage):
     pdf_bytes = file_storage.read()
@@ -42,21 +44,47 @@ def ask_question():
     data = request.json
     user_question = data.get("question", "").strip().lower()
 
-    normalized_qa_data = {q.lower(): a for q, a in qa_data.items()}
-    if not normalized_qa_data:
+    if not qa_data:
         return jsonify({"answer": "No Q&A data available."})
 
-    match = process.extractOne(user_question, normalized_qa_data.keys())
-    if match is None or match[1] < 100:  # Adjust threshold as needed
-        questions_list = list(qa_data.keys())
+    topic_keywords = set()
+    for q in qa_data.keys():
+        topic_keywords.update(q.lower().split())
+
+    question_words = set(user_question.split())
+    relevant_words = question_words.intersection(topic_keywords)
+    irrelevant_words = question_words - topic_keywords
+
+    print(f"User Question: {user_question}")
+    print(f"Relevant Words: {relevant_words}")
+    print(f"Irrelevant Words: {irrelevant_words}")
+
+    if len(irrelevant_words) >= len(relevant_words):
         return jsonify({
             "answer": "Irrelevant. Please try a question related to the topic.",
-            "questions": questions_list
+            "questions": list(qa_data.keys())
         })
-
-    best_match, score = match
-    return jsonify({"answer": normalized_qa_data[best_match]})
     
+    normalized_qa_data = {q.lower(): a for q, a in qa_data.items()}
+
+    # Semantic matching with sentence embeddings
+    question_embedding = model.encode(user_question, convert_to_tensor=True)
+    qa_embeddings = {q: model.encode(q, convert_to_tensor=True) for q in normalized_qa_data.keys()}
+    similarities = {q: util.pytorch_cos_sim(question_embedding, emb).item() for q, emb in qa_embeddings.items()}
+    
+    best_match = max(similarities, key=similarities.get)
+    best_score = similarities[best_match]
+    
+    print(f"Best Match: {best_match} (Score: {best_score})")
+    
+    if best_score > 0.7:  # Adjust threshold for best results
+        return jsonify({"answer": normalized_qa_data[best_match]})
+    
+    return jsonify({
+        "answer": "Irrelevant. Please ask a more specific question about the provided topics.",
+        "questions": list(qa_data.keys())
+    })
+
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # ✅ Use Render's assigned PORT, default to 5000
+    port = int(os.getenv("PORT", 5000))  # Use Render's assigned PORT, default to 5000
     app.run(host="0.0.0.0", port=port, debug=True)
