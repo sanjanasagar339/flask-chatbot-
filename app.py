@@ -11,7 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 qa_data = {}
-model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight semantic similarity model
+model = SentenceTransformer('paraphrase-MiniLM-L3-v2')  # Lightweight semantic similarity model
 
 def extract_text_from_pdf(file_storage):
     pdf_bytes = file_storage.read()
@@ -47,6 +47,12 @@ def ask_question():
     if not qa_data:
         return jsonify({"answer": "No Q&A data available."})
 
+    # ✅ Handle Greetings with punctuation
+    greetings = ["hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening"]
+    clean_question = re.sub(r'[^\w\s]', '', user_question)  # Remove punctuation
+    if clean_question in greetings:
+        return jsonify({"answer": "Hello! How can I help you today?"})
+
     topic_keywords = set()
     for q in qa_data.keys():
         topic_keywords.update(q.lower().split())
@@ -61,8 +67,7 @@ def ask_question():
 
     if len(irrelevant_words) >= len(relevant_words):
         return jsonify({
-            "answer": "Irrelevant. Please try a question related to the topic.",
-            "questions": list(qa_data.keys())
+            "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Tell me about Azure AI'."
         })
     
     normalized_qa_data = {q.lower(): a for q, a in qa_data.items()}
@@ -81,8 +86,7 @@ def ask_question():
         return jsonify({"answer": normalized_qa_data[best_match]})
     
     return jsonify({
-        "answer": "Irrelevant. Please ask a more specific question about the provided topics.",
-        "questions": list(qa_data.keys())
+        "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Tell me about Azure AI'."
     })
 
 if __name__ == "__main__":
