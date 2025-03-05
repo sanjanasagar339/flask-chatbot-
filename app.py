@@ -67,7 +67,7 @@ def ask_question():
 
     if len(irrelevant_words) >= len(relevant_words):
         return jsonify({
-            "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Tell me about Azure AI'."
+            "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Azure AI'."
         })
     
     normalized_qa_data = {q.lower(): a for q, a in qa_data.items()}
@@ -86,7 +86,7 @@ def ask_question():
         return jsonify({"answer": normalized_qa_data[best_match]})
     
     return jsonify({
-        "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Tell me about Azure AI'."
+        "answer": "Irrelevant. Please try a question related to Microsoft AI, such as 'What is Microsoft AI?' or 'Azure AI'."
     })
 
 if __name__ == "__main__":
